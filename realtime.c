@@ -10,7 +10,7 @@
  */
 
 #define S_FUNCTION_LEVEL 2
-#define S_FUNCTION_NAME  sfun_rttime
+#define S_FUNCTION_NAME realtime
 
 #define TIME_SCALE_FACTOR(S) ssGetSFcnParam(S,0)
 
