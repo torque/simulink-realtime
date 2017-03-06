@@ -21,6 +21,8 @@
 #include <windows.h>
 #include <math.h>
 
+#define timer_setup()
+
 __inline double timer_gettime() {
     HANDLE hCurrentProcess = GetCurrentProcess();
     DWORD dwProcessAffinity;
@@ -40,14 +42,17 @@ __inline double timer_gettime() {
     sec_per_tick = (double)1/(double)frequency.QuadPart;
     total_ticks = (double)counter.QuadPart;
     return sec_per_tick*total_ticks;
-}   /* end hightimer */
-#else
-/* Include the standard ANSI C header for handling time functions. */
+}
+
+#elif defined(__linux__)
+
 #if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 199309L
 #define _POSIX_C_SOURCE 199309L
 #endif
 
 #include <time.h>
+
+#define timer_setup()
 
 __inline double timer_gettime() {
     struct timespec time;
@@ -58,6 +63,28 @@ __inline double timer_gettime() {
     // tv_nsec
     return ( (double)time.tv_sec + 1e-9*(double)time.tv_nsec );
 }
+
+#elif defined(__APPLE__)
+
+#include <mach/mach_time.h>
+// mach_absolute_time returns a uint64_t in ticks. We have to convert to actual
+// nanoseconds, which requires an additional syscall.
+static double timebase = 1.0;
+
+void timer_setup( void ) {
+    mach_timebase_info_data_t tb = { 0 };
+    mach_timebase_info( &tb );
+    timebase = 1e-9*tb.numer/tb.denom;
+}
+
+__inline double timer_gettime() {
+    return mach_absolute_time()*timebase;
+}
+
+#else
+
+#error Unspported platform.
+
 #endif
 
 static void mdlInitializeSizes(SimStruct *S) {
@@ -89,6 +116,7 @@ static void mdlInitializeSampleTimes(SimStruct *S) {
 #define MDL_START
 static void mdlStart(SimStruct *S)
 {
+    timer_setup();
     ssSetRWorkValue(S,0,ssGetTStart(S));
 }
 
